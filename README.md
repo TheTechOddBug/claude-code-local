@@ -260,6 +260,79 @@ claude --model claude-sonnet-4-6
 
 ---
 
+## 🎯 Orchestrator API (NEW)
+
+A REST API that lets any client — web app, mobile app, another AI, or a simple `curl` command — control your entire Mac through local AI. Browser, apps, screen recording, all from one endpoint.
+
+```
+Any client (web app, mobile, curl)
+     │
+     ▼
+🎯 Orchestrator API (port 4001)
+     ├── ⚡ MLX Server (port 4000) ← local AI brain
+     ├── 🌐 Brave CDP (port 9222) ← browser control
+     ├── 📹 Studio Record.app      ← screen recording
+     └── 🖥️ macOS (AppleScript)    ← app control
+```
+
+### Start the API
+
+```bash
+# Double-click the launcher:
+open "Orchestrator API.command"
+
+# Or start manually:
+~/.local/mlx-server/bin/python3 proxy/api.py
+```
+
+### Submit a task (natural language)
+
+```bash
+curl -X POST localhost:4001/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "Start recording for 4 minutes, open Yahoo News, find a food article, and draft a comment"}'
+
+# Returns: {"id": "abc123", "status": "pending"}
+```
+
+### Check progress
+
+```bash
+curl localhost:4001/tasks/abc123
+# Returns: status, steps taken, results
+```
+
+### Real-time progress via WebSocket
+
+```javascript
+const ws = new WebSocket("ws://localhost:4001/ws/tasks/abc123");
+ws.onmessage = (e) => console.log(JSON.parse(e.data));
+// Streams: {"type": "step", "step": {"tool": "browser_navigate", ...}}
+```
+
+### Direct tool access
+
+```bash
+# Browser
+curl -X POST localhost:4001/tools/browser/navigate -d '{"args":{"url":"https://yahoo.com"}}'
+curl -X POST localhost:4001/tools/browser/snapshot
+
+# macOS
+curl -X POST localhost:4001/tools/macos/open -d '{"args":{"name":"Studio Record"}}'
+curl -X POST localhost:4001/tools/macos/applescript -d '{"args":{"code":"tell app \"Finder\" to get name of every disk"}}'
+curl -X POST localhost:4001/tools/macos/command -d '{"args":{"command":"ls ~/Desktop"}}'
+
+# Recording
+curl -X POST localhost:4001/tools/record/start -d '{"args":{"duration":240}}'
+curl -X POST localhost:4001/tools/record/stop
+```
+
+### Interactive API docs
+
+Visit **http://localhost:4001/docs** for auto-generated Swagger UI with all endpoints.
+
+---
+
 ## 🔧 How It Works
 
 ```
@@ -345,11 +418,13 @@ The context meter shows green/yellow/red after each step:
 ```
 📦 claude-code-local/
  ├── ⚡ proxy/
- │   └── server.py              ← MLX server with tool-call recovery + retry logic (~600 lines)
+ │   ├── server.py              ← MLX server with tool-call recovery + retry logic (~600 lines)
+ │   └── api.py                ← Orchestrator API — browser + macOS + recording (port 4001)
  ├── 🌐 agent.py                ← Standalone browser agent with context memory pipeline
  ├── 🚀 launchers/
  │   ├── Claude Local.command    ← Double-click to start Claude Code locally
- │   └── Browser Agent.command   ← Double-click for autonomous browser control
+ │   ├── Browser Agent.command   ← Double-click for autonomous browser control
+ │   └── Orchestrator API.command ← Double-click to start the API server
  ├── 🛠️ scripts/
  │   ├── download-and-import.sh  ← Download models
  │   ├── persistent-download.sh  ← Auto-retry downloader

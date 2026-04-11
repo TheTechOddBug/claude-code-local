@@ -9,6 +9,7 @@
     <a href="#-benchmarks"><img src="https://img.shields.io/badge/⚡_Top_Speed-65_tok%2Fs-brightgreen?style=for-the-badge" alt="Speed"></a>
     <a href="#-benchmarks"><img src="https://img.shields.io/badge/🚀_Claude_Code-17.6s_per_task-blue?style=for-the-badge" alt="Claude Code"></a>
     <a href="#-safety--how-the-data-flows"><img src="https://img.shields.io/badge/🔒_Privacy-100%25_Local-success?style=for-the-badge" alt="100% Local"></a>
+    <a href="#-hands-free-voice-mode--the-whole-loop-on-device"><img src="https://img.shields.io/badge/🎤_Voice-Hands_Free-orange?style=for-the-badge" alt="Hands-Free Voice"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/📜_License-MIT-yellow?style=for-the-badge" alt="MIT"></a>
   </p>
 </p>
@@ -85,12 +86,12 @@ Four ways to run the lineup. Each one is a double-clickable launcher in `launche
    │  → Llama 70B.command        │  DOM with 0 cloud calls.     │
    │                             │  → Browser Agent.command     │
    ├─────────────────────────────┼─────────────────────────────┤
-   │  🎭 NARRATIVE MODE          │  📱 PHONE MODE               │
+   │  🎤 HANDS-FREE VOICE        │  📱 PHONE MODE               │
    │  ─────────────              │  ────────────                │
-   │  Gemma speaks every reply   │  Text from your couch.       │
-   │  out loud through your TTS  │  iMessage in, code/video     │
-   │  or cloned voice. Includes  │  out. Full screen-record +   │
-   │  a sanitized persona file.  │  send-back pipeline.         │
+   │  Speak a question, hear     │  Text from your couch.       │
+   │  the reply in your own      │  iMessage in, code/video     │
+   │  cloned voice. STT + TTS    │  out. Full screen-record +   │
+   │  both 100% on-device.       │  send-back pipeline.         │
    │  → Narrative Gemma.command  │  → ~/.claude/imessage-*.sh   │
    └─────────────────────────────┴─────────────────────────────┘
 ```
@@ -99,7 +100,7 @@ Four ways to run the lineup. Each one is a double-clickable launcher in `launche
 |---|---|---|
 | 🤖 **Code** | Run Claude Code with a local model — same UX, no API key | `Claude Local.command`, `Gemma 4 Code.command`, `Llama 70B.command` |
 | 🌐 **Browser** | Local AI controls real Brave browser via Chrome DevTools | `Browser Agent.command` |
-| 🎭 **Narrative** | Every reply spoken aloud through your TTS / cloned voice | `Narrative Gemma.command` |
+| 🎤 **Hands-Free Voice** | Speak in, hear replies in your cloned voice — full loop, 100% on-device | `Narrative Gemma.command` + NarrateClaude |
 | 📱 **Phone** | iMessage in → text/image/video out, full pipeline | `~/.claude/imessage-*.sh` |
 
 ---
@@ -111,14 +112,14 @@ Your MacBook has a powerful GPU built right into the chip. This project uses tha
 🚫 No internet needed
 💰 No monthly subscription
 🔒 No one sees your code or data
-✅ Full Claude Code experience — write code, edit files, manage projects, control your browser, even narrate replies in your own voice
+✅ Full Claude Code experience — write code, edit files, manage projects, control your browser, or run a **full hands-free voice session** where you speak every question and hear every reply in your own cloned voice (both directions on-device)
 
 ```
          📱 You (Mac or Phone)
           │
      🤖 Claude Code           ← the AI coding tool you know
           │
-     ⚡ MLX Native Server      ← our server (~800 lines of Python)
+     ⚡ MLX Native Server      ← our server (~1000 lines of Python)
           │
      🥊 Pick your fighter     ← Gemma 4 31B · Llama 3.3 70B · Qwen 3.5 122B
           │
@@ -516,30 +517,84 @@ The context meter shows green/yellow/red after each step:
 
 ---
 
-## 🎭 Narrative Mode
+## 🎤 Hands-Free Voice Mode — The Whole Loop On-Device
 
-A new mode where **every reply gets spoken aloud** through your speakers. Pair Gemma 4 31B with a TTS CLI (your cloned voice, ElevenLabs, Piper, or just macOS `say`) and the model narrates everything it's doing in real time — "opening your notes file now", "found 12 TODOs across 4 files", etc.
+Talk to your Mac. It talks back in your own cloned voice. **Nothing touches the internet in either direction.**
+
+This is the feature I'm proudest of in the whole stack, and the one I haven't seen anyone else demo publicly. Most "AI voice" demos use cloud STT (Whisper API, Deepgram, Google Cloud Speech) and cloud TTS (ElevenLabs cloud, OpenAI, Azure) — so your voice hits someone else's server before you see a word of transcript, and every reply makes another cloud round-trip back as audio. This doesn't. **Both sides of the loop run fully on your Mac, end to end.**
+
+### The full voice loop
 
 ```
-   You ask a question
-        │
-        ▼
-   🎭 Gemma 4 31B (narrative persona loaded)
-        │
-        ├──> 🔊 ~/.local/bin/speak "Sure, opening your notes file now."
-        │
-        ├──> 📂 [Read tool call]
-        │
-        ├──> 🔊 ~/.local/bin/speak "Got it — your notes are about the auth migration."
-        │
-        └──> 💬 Text reply: "Read it. Want a summary?"
+┌─────────────────────────────────────────────────────────────────┐
+│                     YOUR MACBOOK (M-series)                     │
+│                                                                 │
+│    🎙️  Your voice                                               │
+│         │                                                       │
+│         ▼                                                       │
+│    🎧 listen  (custom Swift binary)                             │
+│       • Apple SFSpeechRecognizer — on-device engine             │
+│       • Continuous listening, stability-based utterance end     │
+│       • Auto-pauses during playback to stop feedback loops      │
+│       • Wedge-detection watchdog, preventive 10-min recycle     │
+│         │                                                       │
+│         ▼                                                       │
+│    📬 dispatch  (bash watchdog + router)                        │
+│         │                                                       │
+│         ▼                                                       │
+│    ⌨️  inject  (AppleScript → target Terminal window by id)     │
+│         │                                                       │
+│         ▼                                                       │
+│    🤖 claude  (narration persona loaded from CLAUDE.md)         │
+│         │                                                       │
+│         ▼                                                       │
+│    ⚡ MLX Server → 🥊 Gemma 4 31B  (local, 4-bit, ~15 tok/s)    │
+│         │                                                       │
+│         ▼                                                       │
+│    🔊 ~/.local/bin/speak  "naturally phrased reply"             │
+│       • Pocket TTS with your own cloned voice                   │
+│       • Or any TTS that takes text + plays audio                │
+│         │                                                       │
+│         ▼                                                       │
+│    🎵 afplay  (listen pauses itself during this so the          │
+│                model's own voice doesn't feed back in)          │
+│         │                                                       │
+│         ▼                                                       │
+│    👂 You hear it                                               │
+│         │                                                       │
+│         └──────────────► and you keep talking                   │
+│                                                                 │
+│           🔒 Your voice never leaves this box. Ever.            │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-The persona file (`NarrativeGemma/CLAUDE.md`) is loaded as a system prompt at launch. It enforces the **speak-first-reply-second** rule on every turn.
+### What makes this actually work
 
-**No fancy TTS?** The persona doc shows you how to stub `~/.local/bin/speak` in three lines using macOS's built-in `say` command.
+- 🎙️ **Speech-in** — a compiled Swift binary wraps Apple's `SFSpeechRecognizer` (the same on-device engine that powers macOS Dictation) in a *continuous* listening loop rather than the usual Fn-Fn toggle. End of utterance is detected via **partial-result stability**: if the transcribed text stops changing for 2.5 seconds, the recognizer finalizes that sentence. That's way more robust than silence/RMS heuristics against background noise, fans, or music.
+- 🔊 **Speech-out** — a CLI at `~/.local/bin/speak` wraps **Pocket TTS** driving a cloned copy of Matt's own voice. Any TTS that accepts a string and plays audio slots in — macOS `say`, Piper, local ElevenLabs, your choice.
+- 🔁 **Feedback-loop prevention** — the listener auto-pauses while `afplay` is running, so the TTS output of one turn never gets picked up as input for the next. No "the model talking to itself" loops.
+- 🧠 **Speak-every-turn is enforced via system prompt** — `NarrativeGemma/CLAUDE.md` is loaded as the narration persona. It tells Gemma to narrate every tool call, every reasoning step, every result, *before* it writes the text reply. You're never staring at a silent terminal wondering if it's thinking.
+- 🛡️ **Real production hardening** — 10-minute preventive process recycle (dodges a known `SFSpeech` daemon wedge), queue-backlog detection with a non-zero exit code when the listener is stuck. Not a demo script — a tool that has to run unattended for hours.
 
-> 💡 **Double-click** `Narrative Gemma.command` to launch. It boots Gemma 4 31B, injects the narration rules into the system prompt, and opens Claude Code in narration mode.
+### Why it matters
+
+"Voice-controlled AI" is everywhere right now, but under the hood almost every public demo is a cloud pipeline wearing a local-looking coat. If the network drops, the demo dies. If your client's laptop blocks outbound connections, the demo dies. If you're on a plane, in a Faraday cage, or debugging on a disconnected-by-policy machine, the demo dies.
+
+This setup doesn't die. **Apple's on-device speech engine is a fully local model that already ships with the OS**, and accessing it via `SFSpeechRecognizer` is a first-class macOS API — it's just that almost nobody wraps it in a continuous-listen daemon with production hardening and plumbs it to a local LLM with a cloned-voice reply stream. Now there's one.
+
+### How to wire it up
+
+> 🛠️ **The listening stack lives in its own folder.** The `Listen.swift` binary, the `dictation` / `dispatch` / `inject` scripts, and the `NarrativeClaude.app` launcher all live at `~/NarrateClaude/` — **a sibling project to `claude-code-local`**, not bundled inside it. Same design as the browser agent: one repo per focused tool, so edits don't drift between a vendored copy and the real source of truth.
+
+The `claude-code-local` side is the part that runs the model and speaks replies:
+
+- `launchers/Narrative Gemma.command` — boots the MLX server with Gemma 4 31B and injects the narration persona via `MLX_APPEND_SYSTEM_PROMPT_FILE` so Gemma narrates every turn
+- `NarrativeGemma/CLAUDE.md` — the narration persona itself (opt-in, sanitized, generic)
+- `~/.local/bin/speak` — your chosen TTS CLI (Matt uses Pocket TTS with a cloned voice; `say "$@"` works as a three-line stub if you don't have a fancier setup)
+
+The `NarrateClaude` side is the listening pipeline (Swift binary + dispatch scripts + target-window injection). It's not yet published as a public repo — I want to clean up the build steps first. If you want to try it before that, open an issue and I'll share the source.
+
+> 💡 **Double-click** `Narrative Gemma.command` to launch the model-and-speak side standalone (keyboard in, voice out). Double-click `NarrativeClaude.app` (once it's installed from the sibling repo) to launch the full hands-free loop (voice in, voice out, no keyboard).
 
 ---
 
@@ -604,14 +659,15 @@ We didn't start here. We went through three generations in one night:
 
 ## 🤝 Contributing & Ideas
 
-A lot has changed since this repo was one night of "can I run Claude Code on Ollama." It's now a full local-AI stack: a ~1000-line MLX-native Anthropic server, prompt-cache reuse, Gemma / Llama / Qwen native tool-call parsing, code mode (auto-strips Claude Code's 10K-token harness prompt for local models), the browser agent, narration mode, an iMessage pipeline, model-aware launcher restart — way past what "The Journey" table above actually covers.
+A lot has changed since this repo was one night of "can I run Claude Code on Ollama." It's now a full local-AI stack: a ~1000-line MLX-native Anthropic server, prompt-cache reuse, Gemma / Llama / Qwen native tool-call parsing, code mode (auto-strips Claude Code's 10K-token harness prompt for local models), the browser agent, narration mode, an iMessage pipeline, model-aware launcher restart, and — the piece I think is the biggest deal — a **fully on-device hands-free voice loop** (Apple `SFSpeechRecognizer` + cloned-voice TTS) that lives in the sibling NarrateClaude project. Way past what "The Journey" table above covers.
 
-I built it because it solves *my* workflow end to end. Coding on planes, sensitive client work, drafting from my phone, handing off to local models when I don't want cloud latency or cloud bills. But the piece I'm proudest of is **Narrative Gemma** — double-click the launcher and Gemma 4 31B talks back through your speakers on every turn. The goal of that mode is a full coding session handled entirely through voice: no keyboard, no screen-watching, just speak and listen. The speak-out side works today. Voice-*input* (STT → Claude Code) is the obvious next step and the thing I'd most love help with.
+I built this because it solves *my* workflow end to end. Coding on planes, sensitive client work, drafting from my phone, handing off to local models when I don't want cloud latency or cloud bills, and (the thing I come back to most) running actual coding sessions hands-free — speak a request, listen to Gemma narrate the plan, hear it confirm the result, keep talking. No keyboard, no screen-watching. The whole loop is in-place today. I'd love to hear how others could use it.
 
 **If you have ideas, bug reports, a new launcher for a model I don't run, a better code-mode prompt, or a workflow this doesn't cover — open an issue or a PR.** I read them all. Especially interested in hearing from:
 
 - 🧠 People on older Apple Silicon (M1 / M2, 16–36 GB) who know which models actually fit and still do useful coding work
-- 🎤 Anyone who wants to wire voice-input into Narrative mode — Whisper, Apple's on-device Speech framework, kyutai's Moshi, whatever
+- 🎤 Anyone who wants to stress-test the hands-free voice loop on different hardware, different TTS voices, or different dictation accents — we're currently running it on one M5 Max with one cloned voice
+- 🔊 TTS recipes beyond Pocket TTS — Piper, local ElevenLabs, MLX-TTS, Kyutai Moshi, or anything else that slots cleanly into `~/.local/bin/speak`
 - 🔌 Folks with workflows this doesn't touch yet — what would *you* want from a local Claude Code?
 - 🐛 Anyone who runs into edge cases I'll never hit on an M5 Max with 128 GB
 

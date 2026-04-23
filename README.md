@@ -66,6 +66,33 @@
 ---
 
 <p align="center">
+  <h2 align="center">🏁 HEXAGON SHOOTOUT — Free AI vs $100/mo Claude Code</h2>
+  <p align="center">
+    <strong>Three AIs. One laptop. Same prompt. Live counters.<br>
+    Watch Gemma 31B local, Llama 70B local, and Claude cloud race the same HTML physics prompt on a MacBook.</strong>
+  </p>
+  <p align="center">
+    <a href="https://www.youtube.com/watch?v=2KeTDDodE0A">
+      <img src="https://img.youtube.com/vi/2KeTDDodE0A/maxresdefault.jpg" width="720" alt="Hexagon Shootout — 3 AIs, 1 laptop, same prompt, live">
+    </a>
+  </p>
+  <p align="center">
+    <a href="https://www.youtube.com/watch?v=2KeTDDodE0A">
+      <img src="https://img.shields.io/badge/▶_Watch_on_YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch on YouTube">
+    </a>
+    &nbsp;
+    <a href="https://www.youtube.com/@nicedreamzapps">
+      <img src="https://img.shields.io/badge/Subscribe-@nicedreamzapps-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Subscribe">
+    </a>
+  </p>
+  <p align="center">
+    <em>Gemma 31B: 56s · Claude cloud: 22s · Llama 70B: 2:17 — two of three ran with zero cloud calls.</em>
+  </p>
+</p>
+
+---
+
+<p align="center">
   <h3 align="center">🎤 Also on the channel — NarrateClaude (Hands-Free Ambient AI)</h3>
   <p align="center">
     <em>Speak to Claude Code, hear replies in a cloned voice — 100% on-device. 2:31.</em>

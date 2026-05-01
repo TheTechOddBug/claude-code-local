@@ -119,12 +119,12 @@
     <em>Open any browser on any phone — chat with the Mac mini at home, hear it reply in your own cloned voice. 0:50.</em>
   </p>
   <p align="center">
-    <a href="https://www.youtube.com/watch?v=k505IMnCSjc">
-      <img src="https://img.youtube.com/vi/k505IMnCSjc/maxresdefault.jpg" width="540" alt="My Mac mini at home is the AI — browser-anywhere demo">
+    <a href="https://www.youtube.com/watch?v=PLbV4QtFmFY">
+      <img src="https://img.youtube.com/vi/PLbV4QtFmFY/maxresdefault.jpg" width="540" alt="My Mac mini at home is the AI — browser-anywhere demo">
     </a>
   </p>
   <p align="center">
-    <a href="https://www.youtube.com/watch?v=k505IMnCSjc"><img src="https://img.shields.io/badge/▶_Watch_on_YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch"></a>
+    <a href="https://www.youtube.com/watch?v=PLbV4QtFmFY"><img src="https://img.shields.io/badge/▶_Watch_on_YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch"></a>
     &nbsp;
     <a href="https://www.youtube.com/@nicedreamzapps"><img src="https://img.shields.io/badge/Subscribe-@nicedreamzapps-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="Subscribe"></a>
   </p>

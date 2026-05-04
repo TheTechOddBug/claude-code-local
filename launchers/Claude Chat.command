@@ -39,8 +39,13 @@ MLX_MODEL_DEFAULT="$(resolve_mlx_model \
   "$HOME/.cache/huggingface/hub/Qwen2.5-Coder-14B-Instruct-4bit" \
   "mlx-community/Qwen2.5-Coder-14B-Instruct-4bit")"
 
+# 4-bit KV cache from token 0 keeps the chat session under 16 GB even after
+# many turns of accumulated context.
+export MLX_KV_BITS="${MLX_KV_BITS:-4}"
+export MLX_KV_QUANT_START="${MLX_KV_QUANT_START:-0}"
+
 ensure_mlx_server "${MLX_MODEL:-$MLX_MODEL_DEFAULT}" \
-  "  Loading Qwen 2.5 Coder 14B 4-bit on MLX (~10-15 tok/s in 16 GB)..."
+  "  Loading Qwen 2.5 Coder 14B 4-bit on MLX (KV=4-bit, ~10-15 tok/s in 16 GB)..."
 
 clear
 echo ""

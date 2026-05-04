@@ -6,13 +6,14 @@ de memoria unificada** - hardware abaixo do alvo original do projeto
 (M Max / Ultra com 64-128 GB).
 
 A documentacao oficial do repositorio assume Mac Max/Ultra. Em hardware
-mais modesto, cinco problemas reproduziveis aparecem em sequencia:
+mais modesto, seis problemas reproduziveis aparecem em sequencia:
 
 1. Tela de selecao de login do Claude Code mesmo com `ANTHROPIC_API_KEY` setado
 2. Vazamento de tokens internos do modelo (`<|im_end|>`, `<|endoftext|>`, ...) na resposta
 3. Respostas vazias ("(No output)") em todas as mensagens
 4. Tool-calls do Qwen 2.5 nao reconhecidos pelo parser do servidor
 5. Claude Code chama `api.anthropic.com` no startup mesmo com `ANTHROPIC_BASE_URL` setado (vazamento de "100% offline")
+6. **Tools nunca executam:** Claude Code descarta toda resposta com `tool_use` porque o servidor responde JSON unico em vez de `text/event-stream`
 
 Este guia explica a causa de cada um e a correcao aplicada nesta branch.
 
@@ -293,6 +294,112 @@ Servidor MLX (`/tmp/mlx-server.log`):
 > Observacao adicional: em modo `--print`, e necessario fechar
 > o stdin com `</dev/null`, caso contrario o claude trava esperando
 > input mesmo com o prompt passado como argumento.
+
+---
+
+## 6. Bug critico do modo agentico - Claude Code descarta tool_use sem SSE
+
+Esse foi o problema mais dificil de diagnosticar e o que finalmente
+destravou o modo agentico em 16 GB.
+
+### Sintoma
+
+Em sessoes com tools:
+
+```bash
+claude "Use Bash para criar hello.txt com 'oi'" --print --dangerously-skip-permissions
+```
+
+Saida do claude: `(No output)`. Nenhum arquivo criado.
+
+No log do servidor MLX o que se ve eh:
+
+```
+POST /v1/messages tools=22
+  ← OK (68 tok) [tool_use: Bash]
+POST /v1/messages tools=22         ← Claude Code repete a MESMA request
+  DEBUG msg trail: [user] ['text','text','text']   ← sem assistant nem tool_result!
+  ← OK (15 tok) (No output)
+```
+
+Ou seja: o servidor gera o `tool_use` Bash corretamente, com `id`,
+`name`, `input.command` e `stop_reason: "tool_use"` validos. **Mas o
+Claude Code descarta a resposta inteira** e refaz a request original
+sem incluir o `assistant.tool_use` nem o `user.tool_result`. Por isso
+o num_turns reportado pelo CLI eh `1`: do ponto de vista dele, a
+primeira chamada nem aconteceu.
+
+### Causa
+
+Claude Code 2.1 envia `stream: true` em **toda** request que tem tools
+no body. Quando recebe `Content-Type: application/json` em vez de
+`text/event-stream`, ele descarta silenciosamente, retenta uma vez
+sem o tool_use no historico, e exibe `(No output)`.
+
+O `proxy/server.py` original ignorava o campo `stream` e sempre
+respondia com JSON unico via `send_json`. Para chat puro isso
+funciona porque a resposta cabe em um delta. Para tool_use, nao.
+
+### Correcao
+
+Implementar a sequencia de eventos SSE da Messages API da Anthropic
+no servidor (`send_anthropic_stream`):
+
+```
+event: message_start         <- com id/model/role
+event: content_block_start   <- por bloco
+event: content_block_delta   <- text_delta para texto, input_json_delta para tools
+event: content_block_stop
+event: message_delta         <- com stop_reason
+event: message_stop
+```
+
+E rotear:
+
+```python
+if body.get("stream"):
+    send_anthropic_stream(self, result)
+else:
+    send_json(self, 200, result)
+```
+
+Detalhe critico: o header `Connection` precisa ser `close` (nao
+`keep-alive`). Como o servidor gera a resposta inteira antes de
+"streamar" (replay de eventos), nao tem mais nada para mandar. Com
+`keep-alive` o cliente fica esperando indefinidamente.
+
+### Validacao
+
+Apos a fix, sessao agentica completa funciona:
+
+```bash
+ANTHROPIC_BASE_URL=http://localhost:4000 \
+ANTHROPIC_API_KEY=sk-local \
+ANTHROPIC_AUTH_TOKEN=sk-local \
+CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 \
+DISABLE_AUTOUPDATER=1 \
+claude "Use Bash to run: echo 'oi do qwen' > hello.txt && cat hello.txt" \
+  --print --effort low --dangerously-skip-permissions </dev/null
+```
+
+Saida do claude:
+
+```
+The file `hello.txt` has been created with the content "oi do qwen".
+```
+
+`hello.txt` criado no disco com o conteudo correto. Trail observado
+no servidor:
+
+```
+POST 1: [user] ['text','text','text']                                -> tool_use Bash
+POST 2: [user] ['text','text','text'] | [assistant] ['tool_use'] | [user] ['tool_result']
+        -> "The file hello.txt has been created..."
+```
+
+Multi-tool em sequencia (`Write` + `Read` no mesmo response) tambem
+funcionou: o Claude Code executou os dois e enviou os dois
+`tool_result` de volta na proxima request.
 
 ---
 

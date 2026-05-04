@@ -16,6 +16,13 @@
 #   - Reliable tool-call emission (validated against Bash/Read/Glob)
 #   - Native MLX 4-bit quant for Apple Silicon (no GGUF translation)
 #
+# Why MLX_KV_BITS=4 / MLX_KV_QUANT_START=0:
+#   - Claude Code 2.1 sends a ~5860-token system prompt on every request,
+#     which makes the KV cache the main RAM consumer (not the weights).
+#   - Quantizing the cache to 4-bit from token 0 keeps prefill below the
+#     16 GB ceiling and avoids kIOGPUCommandBufferCallbackErrorOutOfMemory
+#     crashes mid-conversation.
+#
 # Tool-call reliability on a 16 GB Mac is lower than on Max/Ultra hardware.
 # Expect ~10-15 tok/s and occasional garbled tool calls; the server already
 # retries via recover_garbled_tool_json. For mission-critical agentic work,
@@ -30,8 +37,13 @@ MLX_MODEL_DEFAULT="$(resolve_mlx_model \
   "$HOME/.cache/huggingface/hub/Qwen2.5-Coder-14B-Instruct-4bit" \
   "mlx-community/Qwen2.5-Coder-14B-Instruct-4bit")"
 
+# 4-bit KV cache from token 0: required to stay under 16 GB with Claude
+# Code 2.1's ~5860-token system prompt. Override with stronger machines.
+export MLX_KV_BITS="${MLX_KV_BITS:-4}"
+export MLX_KV_QUANT_START="${MLX_KV_QUANT_START:-0}"
+
 ensure_mlx_server "${MLX_MODEL:-$MLX_MODEL_DEFAULT}" \
-  "  Loading Qwen 2.5 Coder 14B 4-bit on MLX (~10-15 tok/s in 16 GB)..."
+  "  Loading Qwen 2.5 Coder 14B 4-bit on MLX (KV=4-bit, ~10-15 tok/s in 16 GB)..."
 
 clear
 echo ""

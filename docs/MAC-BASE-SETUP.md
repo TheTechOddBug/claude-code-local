@@ -6,11 +6,12 @@ de memoria unificada** - hardware abaixo do alvo original do projeto
 (M Max / Ultra com 64-128 GB).
 
 A documentacao oficial do repositorio assume Mac Max/Ultra. Em hardware
-mais modesto, tres problemas reproduziveis aparecem em sequencia:
+mais modesto, quatro problemas reproduziveis aparecem em sequencia:
 
 1. Tela de selecao de login do Claude Code mesmo com `ANTHROPIC_API_KEY` setado
 2. Vazamento de tokens internos do modelo (`<|im_end|>`, `<|endoftext|>`, ...) na resposta
 3. Respostas vazias ("(No output)") em todas as mensagens
+4. Tool-calls do Qwen 2.5 nao reconhecidos pelo parser do servidor
 
 Este guia explica a causa de cada um e a correcao aplicada nesta branch.
 
@@ -150,6 +151,48 @@ Aplicado por padrao nos dois launchers desta branch.
 
 ---
 
+## 4. Tool-calls do Qwen 2.5 nao reconhecidos
+
+### Sintoma
+
+Modo agentico nao executa nada. O modelo gera o pedido de tool, mas o
+Claude Code nao executa - aparece como texto puro:
+
+```
+> use Bash to print pwd
+<tools>
+{"name": "Bash", "arguments": {"command": "pwd"}}
+</tools>
+```
+
+### Causa
+
+O `parse_tool_calls` em `proxy/server.py` cobria `<tool_call>...</tool_call>`
+(formato Qwen 3.5 e variantes ChatML modernas) e `<|tool_call>...<tool_call|>`
+(Gemma 4 nativo), mas **nao** cobria `<tools>...</tools>` - o formato que o
+Qwen 2.5 Coder 14B emite naturalmente.
+
+Sem o parser reconhecer a tag, o servidor devolvia o conteudo como bloco
+de texto e o Claude Code nao tinha como executar.
+
+### Correcao
+
+Adicionado **Format 3.5** ao `parse_tool_calls` para reconhecer o
+wrapper `<tools>...</tools>`, com suporte a payload unico (objeto JSON)
+ou multiplos (array de objetos):
+
+```python
+pattern_qwen25 = r'<tools>\s*(.*?)\s*</tools>'
+for match in re.finditer(pattern_qwen25, text, re.DOTALL):
+    content = match.group(1).strip()
+    call_data = json.loads(content)
+    # aceita lista [{"name":..,"arguments":..}, ...] ou um objeto unico
+```
+
+Validado com `Bash({"command":"pwd"})` retornando `stop_reason: tool_use`.
+
+---
+
 ## Modelo recomendado para 16 GB
 
 A tabela oficial do repo nao cobre 16 GB - so 8-16 GB ("modelos pequenos
@@ -159,19 +202,26 @@ A tabela oficial do repo nao cobre 16 GB - so 8-16 GB ("modelos pequenos
 |---|---|---|---|---|---|
 | Qwen 3.5 4B 4-bit | 2.5 GB | 3-5 GB | 25-40 tok/s | Falha frequente | Apenas modo Chat |
 | Llama 3.1 8B 4-bit | 5 GB | 5-7 GB | 15-25 tok/s | Mediano | Compromisso |
-| Qwen 2.5 Coder 14B 4-bit | 8 GB | 9-11 GB | 10-15 tok/s | OK | Bom para codigo |
-| Gemma 4 31B Abliterated 4-bit | 18 GB | 18 GB | 5-8 tok/s | OK (testado pelo upstream) | Tool-calls confiaveis, vai swappar |
+| **Qwen 2.5 Coder 14B 4-bit** | **7.8 GB** | **9-11 GB** | **10-15 tok/s** | **OK (Format 3.5)** | **Padrao desta branch** |
+| Gemma 4 31B Abliterated 4-bit | 18 GB | 18+ GB | OOM em 16 GB | nao testavel | Inviavel em 16 GB |
 
-Os launchers desta branch usam **Gemma 4 31B** por padrao porque eh o
-modelo cujo formato de tool-call ja eh nativo no `proxy/server.py` do
-upstream e cuja confiabilidade em tool-calls foi validada pelo autor
-original do repo. Em 16 GB de RAM ele swappa cerca de 2 GB para o SSD,
-ficando lento mas funcional.
+Os launchers desta branch usam **Qwen 2.5 Coder 14B 4-bit MLX** por
+padrao. Razoes:
+
+- 7.8 GB de pesos cabem em 16 GB de memoria unificada **sem swap**
+- O parser `<tools>` (Format 3.5) ja foi adicionado em `proxy/server.py`
+- Tool-calls validados com `Bash`/`Read`/`Glob`
+- Boa qualidade em codigo e em PT-BR
+
+O Gemma 4 31B foi testado primeiro (eh o padrao do upstream) mas crasha
+com `kIOGPUCommandBufferCallbackErrorOutOfMemory` na primeira inferencia
+em 16 GB - os 18 GB de pesos simplesmente nao cabem com macOS + apps
+abertos consumindo RAM.
 
 Para usar outro modelo, exporte `MLX_MODEL` antes de chamar o launcher:
 
 ```bash
-MLX_MODEL=mlx-community/Qwen2.5-Coder-14B-Instruct-4bit ./launchers/Claude\ Chat.command
+MLX_MODEL=mlx-community/Llama-3.1-8B-Instruct-4bit ./launchers/Claude\ Chat.command
 ```
 
 ---

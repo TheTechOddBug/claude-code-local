@@ -1,10 +1,16 @@
 #!/bin/bash
-# Claude Chat - Claude Code on Gemma 4 31B in CHAT-ONLY mode (no tools)
+# Claude Chat - Claude Code on Qwen 2.5 Coder 14B in CHAT-ONLY mode (no tools)
 # Double-click to launch
 #
 # Designed for Mac base/Pro with 16-32 GB unified memory, where agentic
-# tool-use sessions are unreliable due to RAM pressure and the Claude Code
+# tool-use sessions can be unreliable due to RAM pressure and the Claude Code
 # 2.1 extended-thinking flow that splits each turn into two model calls.
+#
+# Why Qwen 2.5 Coder 14B 4-bit MLX:
+#   - 7.8 GB of weights → fits in 16 GB without swapping
+#   - 14B is large enough to follow Claude Code's system prompt structure
+#   - Strong code/reasoning quality, good PT-BR support
+#   - Native MLX 4-bit quant for Apple Silicon (no GGUF translation layer)
 #
 # This launcher:
 #   - disables all tools (--tools "")
@@ -24,16 +30,16 @@ source "$SCRIPT_DIR/lib/claude-local-common.sh"
 CLAUDE_BIN="${CLAUDE_BIN:-$(command -v claude || echo $HOME/.local/bin/claude)}"
 
 MLX_MODEL_DEFAULT="$(resolve_mlx_model \
-  "$HOME/.cache/huggingface/hub/gemma-4-31b-it-abliterated-4bit-mlx" \
-  "divinetribe/gemma-4-31b-it-abliterated-4bit-mlx")"
+  "$HOME/.cache/huggingface/hub/Qwen2.5-Coder-14B-Instruct-4bit" \
+  "mlx-community/Qwen2.5-Coder-14B-Instruct-4bit")"
 
 ensure_mlx_server "${MLX_MODEL:-$MLX_MODEL_DEFAULT}" \
-  "  Loading Gemma 4 31B Abliterated on MLX (~5-8 tok/s in 16 GB, may swap)..."
+  "  Loading Qwen 2.5 Coder 14B 4-bit on MLX (~10-15 tok/s in 16 GB)..."
 
 clear
 echo ""
 echo "  Claude Code LOCAL - Modo CHAT (sem ferramentas)"
-echo "  Modelo: Gemma 4 31B Abliterated"
+echo "  Modelo: Qwen 2.5 Coder 14B (4-bit MLX, ~7.8 GB)"
 echo "  100% on-device - sem cloud, sem custo de API"
 echo ""
 echo "  Use para: perguntas de codigo, conceitos, debug, conversa."

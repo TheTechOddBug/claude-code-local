@@ -274,9 +274,18 @@ This is the part we're proudest of. **Your code never leaves your Mac.** Not for
 | **MLX framework** | Apple | **0** | ✅ Safe |
 | **Model weights** | HuggingFace verified mlx-community repos | **0** at runtime | ✅ Safe |
 | **iMessage scripts** | Pure shell + AppleScript | localhost only (Studio Record port 17494) | ✅ Safe |
-| **Claude Code CLI** | Anthropic (closed-source binary) | **1 non-blocking** startup call to `api.anthropic.com` — inference still stays 100% local even if the call is firewalled | ⚠️ Disclosed |
+| **Claude Code CLI** | Anthropic (closed-source binary) | **0** with our launchers — `lsof`-verified, only `localhost:4000` | ✅ Safe |
 
-> ℹ️ **On that one exception:** Claude Code's own binary attempts a non-blocking startup handshake to `api.anthropic.com` (likely version/session check). We can't suppress it — it's baked into Anthropic's closed-source CLI. Firewall it and Claude Code still works fine with your local model. Your prompts, code, and completions never leave the machine. Verified with `lsof -i -P` once the model is loaded. Our code (server.py, launchers, scripts) makes **zero** outbound connections.
+> ✅ **Verified offline (as of v0.1.0).** Claude Code 2.1's own binary previously reached out to `api.anthropic.com` on startup for telemetry, statsig feature flags, marketplace auto-install, and the autoupdater — even with `ANTHROPIC_BASE_URL` set. PR #32 (thanks [@tadrianonet](https://github.com/tadrianonet)) plugs all four channels via documented Anthropic env vars, and the new launchers set them automatically:
+>
+> ```bash
+> CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
+> DISABLE_AUTOUPDATER=1
+> CLAUDE_CODE_DISABLE_OFFICIAL_MARKETPLACE_AUTOINSTALL=1
+> CLAUDE_CODE_DISABLE_BACKGROUND_TASKS=1
+> ```
+>
+> Run `lsof -p $(pgrep -f claude)` while a session is active — you'll see only `localhost:4000`. Your prompts, code, and completions never leave the machine. Our code (server.py, launchers, scripts) has always made **zero** outbound connections; the Claude Code CLI now matches.
 
 ### 🚫 What We Ripped Out
 
@@ -286,7 +295,7 @@ This is the part we're proudest of. **Your code never leaves your Mac.** Not for
 
 | Scenario | Cloud Claude | This Repo |
 |---|:---:|:---:|
-| Working with NDA / proprietary code | ❌ Risky | ✅ Air-gapped |
+| Working with NDA / proprietary code | ❌ Risky | ✅ Air-gapped (`lsof`-verified) |
 | Coding on a plane (no wifi) | ❌ Doesn't work | ✅ Works |
 | Running on a kill-switch firewall | ❌ Blocked | ✅ Works |
 | Healthcare / legal / finance review | ⚠️ Compliance burden | ✅ Stays on-device |

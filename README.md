@@ -164,7 +164,13 @@ We started with one model. Now we ship a **roster**. Same MLX server, same Anthr
 
 We tested it the day Antirez (the Redis guy) shipped `ds4`. **Local DeepSeek beat cloud Claude on wall-clock time** on the same MacBook, same prompt.
 
-▶ **[Watch the three-way comparison on YouTube](https://youtu.be/7l8-s8xkpms)** — DeepSeek V4 Flash vs Cloud Claude vs Gemma 4 31B, generating animated northern lights from one identical prompt.
+<p align="center">
+  <a href="https://youtu.be/7l8-s8xkpms" target="_blank">
+    <img src="https://img.youtube.com/vi/7l8-s8xkpms/maxresdefault.jpg" alt="Three-way local AI comparison — DeepSeek V4 Flash vs Cloud Claude vs Gemma 4 31B" width="640">
+  </a>
+  <br>
+  <em>▶ Watch on YouTube — DeepSeek V4 Flash vs Cloud Claude vs Gemma 4 31B<br>same prompt · three completely different auroras · one MacBook</em>
+</p>
 
 | | |
 |---|---|

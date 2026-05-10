@@ -1,7 +1,7 @@
 <p align="center">
   <h1 align="center">🧠⚡ Claude Code Local — The Lineup</h1>
   <p align="center">
-    <strong>Three local AI brains. Four modes. One MacBook. Zero cloud.<br>Pick your fighter and run Claude Code 100% on-device.</strong>
+    <strong>Three local AI brains. Four modes. One MacBook. Zero cloud.<br>Pick your fighter and run Claude Code 100% on-device.<br>📍 Now with <a href="#-new-deepseek-v4-flash-via-ds4">DeepSeek V4 Flash · 1M-token context · via Antirez's <code>ds4</code> engine</a>.</strong>
   </p>
   <p align="center">
     <a href="https://github.com/nicedreamzapp/claude-code-local/stargazers"><img src="https://img.shields.io/github/stars/nicedreamzapp/claude-code-local?style=for-the-badge&logo=github&color=f5c542&labelColor=1f2328" alt="GitHub stars"></a>
@@ -142,22 +142,38 @@
 
 ## 🥊 The Lineup — Pick Your Fighter
 
-We started with one model. Now we ship a **roster**. Same MLX server, same Anthropic API, swap one env var and you swap the brain.
+We started with one model. Now we ship a **roster**. Same MLX server, same Anthropic API, swap one env var and you swap the brain — plus the brand-new `ds4` engine for DeepSeek V4 Flash slotted in via its own native Metal runtime.
 
-| | 🟢 **Gemma 4 31B** | 🟠 **Llama 3.3 70B** ⭐ | 🔵 **Qwen 3.5 122B** |
+| | 🟢 **Gemma 4 31B** | 🔵 **Qwen 3.5 122B** | 🐳 **DeepSeek V4 Flash** ⭐ |
 |---|:---:|:---:|:---:|
-| Nickname | The Quick One | The Wise One | The Beast |
-| Build | 4-bit IT abliterated | 8-bit affine abliterated | 4-bit MoE (A10B) |
-| Speed | ~15 tok/s | ~7 tok/s | **65 tok/s** 🚀 |
-| Params | 31 B dense | 71 B dense | 122 B / 10 B active |
-| RAM | ~18 GB | ~75 GB | ~75 GB |
-| Disk | 18 GB | 75 GB | 65 GB |
-| Best at | Daily coding, fits 64 GB Mac | Hardest reasoning, full precision | Max throughput, active sparsity |
-| Uploaded by us? | — | ⭐ Yes (HF) | — |
-| Launcher | `Gemma 4 Code.command` | `Llama 70B.command` | `Claude Local.command` |
-| Min RAM to run | 32 GB | 96 GB | 96 GB |
+| Nickname | The Quick One | The Beast | The 1M-Context Whale |
+| Build | 4-bit IT abliterated | 4-bit MoE (A10B) | 2-bit asymmetric (ds4 GGUF) |
+| Speed | ~15 tok/s | **65 tok/s** 🚀 | ~32 tok/s |
+| Params | 31 B dense | 122 B / 10 B active | **284 B / 37 B active** |
+| Context | 128 K | 256 K | **1 M tokens** |
+| RAM | ~18 GB | ~75 GB | ~81 GB |
+| Disk | 18 GB | 65 GB | 81 GB (+ disk KV cache) |
+| Best at | Daily coding, fits 64 GB Mac | Max throughput, active sparsity | Long context, agentic loops |
+| Engine | MLX Native | MLX Native | [`antirez/ds4`](https://github.com/antirez/ds4) |
+| Launcher | `Gemma 4 Code.command` | `Claude Local.command` | `DeepSeek V4 Flash.app` |
+| Min RAM to run | 32 GB | 96 GB | 128 GB |
 
-> 💡 **Fun fact:** Qwen wins raw speed because it's an MoE — only 10B of 122B params activate per token. Llama 70B is the slowest *and* the smartest because it's full-precision dense weights. Gemma is the lightweight champ that fits where the others can't.
+> 💡 **Fun fact:** Qwen wins raw speed because it's an MoE — only 10B of 122B params activate per token. DeepSeek V4 Flash is even bigger (284B) but only ~37B active per token, *and* it ships with on-disk KV cache so a 25k-token Claude Code system prompt prefills exactly once, ever.
+
+### 🐳 New: DeepSeek V4 Flash via `ds4`
+
+We tested it the day Antirez (the Redis guy) shipped `ds4`. **Local DeepSeek beat cloud Claude on wall-clock time** on the same MacBook, same prompt.
+
+▶ **[Watch the three-way comparison on YouTube](https://youtu.be/7l8-s8xkpms)** — DeepSeek V4 Flash vs Cloud Claude vs Gemma 4 31B, generating animated northern lights from one identical prompt.
+
+| | |
+|---|---|
+| 🧠 **Engine** | [`antirez/ds4`](https://github.com/antirez/ds4) — pure C + Metal kernels, ~few thousand lines |
+| 🤗 **Weights** | [`antirez/deepseek-v4-gguf`](https://huggingface.co/antirez/deepseek-v4-gguf) (q2: 81 GB, q4: 153 GB) |
+| 📦 **Server wrapper** | `~/.local/bin/ds4-server-up` (boots on demand) |
+| 🚀 **Claude Code wrapper** | `~/.local/bin/claude-ds4` (drop-in replacement for `claude`) |
+| 📏 **Context** | 1 M tokens; 200 K is sane for most agent runs |
+| 💾 **Disk KV cache** | Persists across restarts — first prefill is the only one that ever happens |
 
 ### ⭐ Our Own Abliterated Upload
 

@@ -962,6 +962,14 @@ Find me:
 
 ---
 
+## 🛟 Related: `claude-failover`
+
+If you'd rather **keep using Claude as primary** but want a local backstop for when your Max plan limit pinches or Anthropic has an outage, see the sibling project:
+
+👉 **[github.com/nicedreamzapp/claude-failover](https://github.com/nicedreamzapp/claude-failover)** — one-command flip between Claude and a local mlx-lm model. Lazy-loads, zero RAM cost when not in failover. Different angle from this repo: Claude stays default, local kicks in only when you flip the switch.
+
+---
+
 ## 💬 Community
 
 A Discord for builders running, contributing to, or hacking on `claude-code-local`, `NarrateClaude`, and `browser-agent`. Share what you're building, ask questions, swap MLX tips. Quiet, builder-tone, no bots.
